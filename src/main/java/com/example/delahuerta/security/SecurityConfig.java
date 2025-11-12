@@ -2,7 +2,6 @@ package com.example.delahuerta.security;
 
 import com.example.delahuerta.filters.JwtAuthenticationFilter;
 import com.example.delahuerta.security.services.UserDetailsServiceImpl;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -22,16 +21,23 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Autowired
-    private JwtAuthenticationFilter jwtAuthFilter; // Filtro que valida el token JWT en cada request
+    private final JwtAuthenticationFilter jwtAuthFilter;
+    private final UserDetailsServiceImpl userDetailsService;
 
-    @Autowired
-    private UserDetailsServiceImpl userDetailsService;
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter,
+                          UserDetailsServiceImpl userDetailsService) {
+        this.jwtAuthFilter = jwtAuthFilter;
+        this.userDetailsService = userDetailsService;
+    }
 
-    // Permite manejar la autenticación
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
@@ -43,22 +49,31 @@ public class SecurityConfig {
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable()) // Desactiva CSRF para APIs REST
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Sin sesiones
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/login").permitAll() // Libre acceso al login
-                .requestMatchers(HttpMethod.POST, "/api/users").permitAll() // (Opcional) registrar usuario nuevo
-                .anyRequest().authenticated() // Resto de endpoints protegidos
+                // Rutas públicas primero
+                .requestMatchers("/api/login").permitAll()
+                .requestMatchers("/api/debug/**").permitAll() // TEMPORAL para debug
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                
+                // Rutas específicas de ADMIN (más específicas primero)
+                .requestMatchers(HttpMethod.POST, "/api/users/**").hasAuthority("ROLE_ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/users").hasAuthority("ROLE_ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/users/**").hasAuthority("ROLE_ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/users").hasAuthority("ROLE_ADMIN")
+                .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
+                
+                // Rutas de USER
+                .requestMatchers("/api/user/**").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                
+                // Todo lo demás requiere autenticación
+                .anyRequest().authenticated()
             )
-            .authenticationProvider(authenticationProvider()) // Usa el proveedor de autenticación
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class); // Aplica el filtro JWT
+            .authenticationProvider(authenticationProvider())
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

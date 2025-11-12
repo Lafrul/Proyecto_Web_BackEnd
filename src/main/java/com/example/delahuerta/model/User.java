@@ -1,17 +1,29 @@
 package com.example.delahuerta.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 @Entity
+@Table(name = "`user`")
 public class User {
-    @Id 
-    @GeneratedValue
-    private Long id;
-    private String username;
-    private String password;
-    private String role;
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
+
+  @Column(nullable=false, unique=true)
+  private String username;
+
+  @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+  @Column(nullable=false)
+  private String password;
+
+  @Column(nullable=false)
+  private String role;
 
     public Long getId() {
         return id;

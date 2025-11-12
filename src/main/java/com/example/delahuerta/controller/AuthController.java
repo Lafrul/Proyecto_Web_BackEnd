@@ -32,20 +32,28 @@ public class AuthController {
         String username = loginRequest.get("username");
         String password = loginRequest.get("password");
 
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(username, password)
-        );
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(username, password)
+            );
 
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        String jwt = jwtUtils.generateToken(userDetails.getUsername());
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            String jwt = jwtUtils.generateToken(userDetails.getUsername());
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("token", jwt);
-        response.put("username", userDetails.getUsername());
+            Map<String, Object> response = new HashMap<>();
+            response.put("token", jwt);
+            response.put("username", userDetails.getUsername());
 
-        // Agregar rol desde la base de datos
-        userRepository.findByUsername(username).ifPresent(user -> response.put("role", user.getRole()));
+            userRepository.findByUsername(username)
+                    .ifPresent(user -> response.put("role", user.getRole()));
 
-        return ResponseEntity.ok(response);
+            return ResponseEntity.ok(response);
+
+        } catch (org.springframework.security.core.AuthenticationException ex) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Credenciales inválidas");
+            return ResponseEntity.status(401).body(error);
+        }
     }
+
 }
