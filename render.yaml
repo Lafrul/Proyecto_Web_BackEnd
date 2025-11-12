@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: delahuerta-api
+    env: java
+    buildCommand: ./mvnw clean package -DskipTests
+    startCommand: java -jar target/*.jar
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: PORT
+        value: 8080
