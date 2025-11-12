@@ -66,6 +66,7 @@ public class RailwayMysqlEnvironmentPostProcessor implements EnvironmentPostProc
         if (parsed.password != null) {
             overrides.put("spring.datasource.password", parsed.password);
         }
+        maybeSetHikariFailFastTimeout(environment, overrides);
 
         MutablePropertySources propertySources = environment.getPropertySources();
         MapPropertySource propertySource = new MapPropertySource(PROPERTY_SOURCE_NAME, overrides);
@@ -86,6 +87,20 @@ public class RailwayMysqlEnvironmentPostProcessor implements EnvironmentPostProc
 
         if (logger.isDebugEnabled()) {
             logger.debug("Effective JDBC URL (sanitized): {}", parsed.jdbcUrl);
+        }
+    }
+
+    private void maybeSetHikariFailFastTimeout(ConfigurableEnvironment environment, Map<String, Object> overrides) {
+        String propertyName = "spring.datasource.hikari.initialization-fail-timeout";
+        if (environment.containsProperty(propertyName)) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Respecting existing value for {}", propertyName);
+            }
+            return;
+        }
+        overrides.put(propertyName, "0");
+        if (logger.isInfoEnabled()) {
+            logger.info("Configured {}=0 to keep retrying while the MySQL service becomes available", propertyName);
         }
     }
 

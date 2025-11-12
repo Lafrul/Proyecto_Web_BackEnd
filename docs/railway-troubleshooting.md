@@ -41,7 +41,7 @@ mysql \
   "$MYSQLDATABASE"
 ```
 
-If the shell cannot reach the database, the failure is outside the Spring Boot application. Double-check firewall settings and confirm the database allows connections from the service.
+If the shell cannot reach the database, the failure is outside the Spring Boot application. Double-check firewall settings and confirm the database allows connections from the service. The application now keeps the HikariCP pool in a retry loop during startup, so once shell connectivity succeeds the service should automatically recover without requiring a redeploy.
 
 ## 5. Ensure the production profile is active
 
