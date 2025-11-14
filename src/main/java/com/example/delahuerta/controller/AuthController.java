@@ -16,6 +16,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
+@CrossOrigin(origins = "*") // Agregar CrossOrigin adicional
 public class AuthController {
 
     @Autowired
@@ -29,6 +30,9 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> loginRequest) {
+        
+        System.out.println("🔐 Login request received for user: " + loginRequest.get("username"));
+        
         String username = loginRequest.get("username");
         String password = loginRequest.get("password");
 
@@ -47,13 +51,14 @@ public class AuthController {
             userRepository.findByUsername(username)
                     .ifPresent(user -> response.put("role", user.getRole()));
 
+            System.out.println("✅ Login successful for: " + username);
             return ResponseEntity.ok(response);
 
         } catch (org.springframework.security.core.AuthenticationException ex) {
+            System.err.println("❌ Login failed for: " + username + " - " + ex.getMessage());
             Map<String, String> error = new HashMap<>();
             error.put("error", "Credenciales inválidas");
             return ResponseEntity.status(401).body(error);
         }
     }
-
 }

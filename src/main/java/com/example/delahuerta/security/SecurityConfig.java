@@ -16,7 +16,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
@@ -24,14 +23,11 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final UserDetailsServiceImpl userDetailsService;
-    private final CorsConfigurationSource corsConfigurationSource;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter,
-                          UserDetailsServiceImpl userDetailsService,
-                          CorsConfigurationSource corsConfigurationSource) {
+                          UserDetailsServiceImpl userDetailsService) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.userDetailsService = userDetailsService;
-        this.corsConfigurationSource = corsConfigurationSource;
     }
 
     @Bean
@@ -55,8 +51,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // Habilitar CORS con nuestra configuración
-            .cors(cors -> cors.configurationSource(corsConfigurationSource))
+            // IMPORTANTE: CORS debe ir PRIMERO
+            .cors(cors -> cors.configure(http))
             
             // Deshabilitar CSRF (necesario para APIs REST)
             .csrf(csrf -> csrf.disable())
@@ -66,10 +62,12 @@ public class SecurityConfig {
             
             // Configuración de autorización
             .authorizeHttpRequests(auth -> auth
-                // Rutas públicas
+                // Rutas públicas - MUY IMPORTANTE: login debe ser permitAll
                 .requestMatchers("/api/login").permitAll()
-                .requestMatchers("/api/debug/**").permitAll() // TEMPORAL para debug
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Preflight CORS
+                .requestMatchers("/api/debug/**").permitAll()
+                
+                // Permitir preflight requests (OPTIONS) para CORS
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 
                 // Rutas de ADMIN
                 .requestMatchers(HttpMethod.POST, "/api/users/**").hasAuthority("ROLE_ADMIN")
