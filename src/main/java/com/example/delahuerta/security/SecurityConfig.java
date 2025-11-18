@@ -53,40 +53,49 @@ public class SecurityConfig {
         http
             // IMPORTANTE: CORS debe ir PRIMERO
             .cors(cors -> cors.configure(http))
-            
+
             // Deshabilitar CSRF (necesario para APIs REST)
             .csrf(csrf -> csrf.disable())
-            
+
             // Política de sesión STATELESS
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            
+
             // Configuración de autorización
             .authorizeHttpRequests(auth -> auth
-                // Rutas públicas - MUY IMPORTANTE: login debe ser permitAll
+                // Rutas públicas
                 .requestMatchers("/api/login").permitAll()
                 .requestMatchers("/api/debug/**").permitAll()
-                
-                // Permitir preflight requests (OPTIONS) para CORS
+
+                // Captura de pedidos desde el sitio público
+                .requestMatchers(HttpMethod.POST, "/api/pedidos").permitAll()
+
+                // Preflight CORS
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                
-                // Rutas de ADMIN
+
+                // Rutas ADMIN para usuarios
                 .requestMatchers(HttpMethod.POST, "/api/users/**").hasAuthority("ROLE_ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/users").hasAuthority("ROLE_ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/users/**").hasAuthority("ROLE_ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/users").hasAuthority("ROLE_ADMIN")
                 .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
-                
-                // Rutas de USER
+
+                // Gestión de pedidos (solo empleados autenticados)
+                .requestMatchers(HttpMethod.GET, "/api/pedidos/**").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                .requestMatchers(HttpMethod.PATCH, "/api/pedidos/**").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/pedidos/**").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+
+                // Rutas de USER genéricas
                 .requestMatchers("/api/user/**").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
-                
+
                 // Todo lo demás requiere autenticación
                 .anyRequest().authenticated()
             )
-            
-            // Agregar filtro JWT
+
+            // Filtro JWT
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
+
 }
